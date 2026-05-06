@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>God-Tier CPU Scheduling Simulator</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* Theme Variables */
+            --bg-color: #0f172a;
+            --glass-bg: rgba(15, 23, 42, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+
+            /* Algorithm Colors */
+            --color-fcfs: #00D1FF;
+            --color-sjf: #7000FF;
+            --color-srtf: #FF007A;
+            --color-rr: #39FF14;
+            --color-priority: #FFD700;
+
+            /* Active Theme Color (defaults to FCFS) */
+            --active-color: var(--color-fcfs);
+            --active-color-glow: rgba(0, 209, 255, 0.4);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #ffffff;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphic Effects */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .neon-border {
+            border: 1px solid var(--active-color);
+            box-shadow: 0 0 10px var(--active-color-glow);
+            transition: all 0.3s ease;
+        }
+
+        /* Typography & Accents */
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-weight: 700;
+        }
+
+        .text-neon {
+            color: var(--active-color);
+            text-shadow: 0 0 8px var(--active-color-glow);
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        /* Form Controls */
+        .form-control,
+        .form-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--active-color);
+            box-shadow: 0 0 0 0.25rem var(--active-color-glow);
+            color: white;
+        }
+
+        .form-select option {
+            background-color: var(--bg-color);
+            color: white;
+        }
+
+        /* Buttons */
+        .btn-neon {
+            background-color: transparent;
+            color: white;
+            border: 1px solid var(--active-color);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-neon:hover {
+            background-color: var(--active-color);
+            color: #000;
+            box-shadow: 0 0 15px var(--active-color);
+        }
+
+        /* Nav Tabs */
+        .nav-tabs {
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .nav-tabs .nav-link {
+            color: rgba(255, 255, 255, 0.6);
+            border: none;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            background: transparent;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: white;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--active-color);
+            background: transparent;
+            border-bottom: 2px solid var(--active-color);
+            text-shadow: 0 0 10px var(--active-color-glow);
+        }
+
+        /* Layout */
+        .main-container {
+            padding: 1.5rem;
+            height: 100vh;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: calc(100vh - 3rem);
+            overflow-y: auto;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 3rem);
+        }
+
+        .tab-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-top: 1rem;
+        }
+
+        /* Simulator Specifics */
+        .gantt-block {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #000;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            transition: width 0.3s linear;
+        }
+
+        .ready-queue-item {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .metric-card {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--active-color);
+            text-shadow: 0 0 10px var(--active-color-glow);
+        }
+
+        .starvation-glow {
+            box-shadow: 0 0 15px #FFD700, inset 0 0 10px #FFD700 !important;
+            background-color: rgba(255, 215, 0, 0.2) !important;
+            animation: pulse-orange 1.5s infinite;
+        }
+
+        @keyframes pulse-orange {
+            0% {
+                box-shadow: 0 0 10px #FFD700, inset 0 0 5px #FFD700;
+            }
+
+            50% {
+                box-shadow: 0 0 20px #FFD700, inset 0 0 15px #FFD700;
+            }
+
+            100% {
+                box-shadow: 0 0 10px #FFD700, inset 0 0 5px #FFD700;
+            }
+        }
+
+        .ghost-gantt-block {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.5);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 991.98px) {
+            .main-container {
+                height: auto;
+            }
+
+            .sidebar,
+            .dashboard {
+                height: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-container container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <aside class="sidebar glass-card neon-border p-4">
+                    <h3 class="text-neon d-flex align-items-center gap-2 mb-4">
+                        <i data-lucide="cpu"></i> Simulator
+                    </h3>
+
+                    <!-- Algorithm Selection -->
+                    <div class="mb-4">
+                        <label class="form-label text-white-50">Select Algorithm</label>
+                        <select class="form-select" id="algorithmSelect" onchange="changeAlgorithm()">
+                            <option value="fcfs">First Come First Serve (FCFS)</option>
+                            <option value="sjf">Shortest Job First (SJF)</option>
+                            <option value="srtf">Shortest Remaining Time First (SRTF)</option>
+                            <option value="rr">Round Robin (RR)</option>
+                            <option value="priority">Priority Scheduling</option>
+                        </select>
+                    </div>
+
+                    <div id="quantumInputGroup" class="mb-3 d-none">
+                        <label class="form-label text-white-50">Time Quantum</label>
+                        <input type="number" class="form-control" id="timeQuantum" value="2" min="1">
+                    </div>
+
+                    <hr class="border-secondary">
+
+                    <!-- Process Input Form -->
+                    <h5 class="text-white mb-3">Add Process</h5>
+                    <form id="processForm" class="d-flex flex-column gap-3">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label text-white-50 small">PID</label>
+                                <input type="text" class="form-control" id="pid" placeholder="P1" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-white-50 small">Arrival Time</label>
+                                <input type="number" class="form-control" id="arrivalTime" value="0" min="0" required>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label text-white-50 small">Burst Time: <span id="btSidebarDisplay"
+                                        class="text-neon" style="color: var(--active-color);">1</span></label>
+                                <input type="range" class="form-range" id="burstTime" value="1" min="1" max="20"
+                                    oninput="document.getElementById('btSidebarDisplay').innerText = this.value; drawGhostGantt();">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-white-50 small">Priority</label>
+                                <input type="number" class="form-control" id="priority" value="1" min="1" required>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-2">
+                            <button type="button"
+                                class="btn btn-neon d-flex align-items-center justify-content-center gap-2"
+                                onclick="addProcess()">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Row
+                            </button>
+                            <div class="row g-2 mt-0">
+                                <div class="col-6">
+                                    <button type="button"
+                                        class="btn btn-outline-light w-100 d-flex align-items-center justify-content-center gap-2"
+                                        onclick="loadSample()">
+                                        <i data-lucide="folder-open" class="w-4 h-4"></i> Sample
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button"
+                                        class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2"
+                                        onclick="clearProcesses()">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="mt-auto pt-4">
+                        <button type="button" id="startSimBtn"
+                            class="btn btn-neon w-100 py-3 d-flex align-items-center justify-content-center gap-2 fs-5"
+                            onclick="startSimulation()">
+                            <i data-lucide="play"></i> START SIMULATION
+                        </button>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Main Dashboard -->
+            <div class="col-md-9">
+                <main class="dashboard glass-card p-4">
+                    <!-- Tabs Navigation -->
+                    <ul class="nav nav-tabs mb-3" id="dashboardTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active d-flex align-items-center gap-2" id="live-tab"
+                                data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab">
+                                <i data-lucide="activity"></i> Live Simulator
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link d-flex align-items-center gap-2" id="gantt-tab" data-bs-toggle="tab"
+                                data-bs-target="#gantt" type="button" role="tab">
+                                <i data-lucide="bar-chart-horizontal"></i> Gantt Chart
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link d-flex align-items-center gap-2" id="table-tab" data-bs-toggle="tab"
+                                data-bs-target="#table" type="button" role="tab">
+                                <i data-lucide="table"></i> Process Table
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link d-flex align-items-center gap-2" id="race-tab" data-bs-toggle="tab"
+                                data-bs-target="#race" type="button" role="tab">
+                                <i data-lucide="zap"></i> Algorithm Race
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tabs Content -->
+                    <div class="tab-content" id="dashboardTabsContent">
+                        <!-- Tab 1: Live Simulator -->
+                        <div class="tab-pane fade show active h-100" id="live" role="tabpanel">
+                            <div class="d-flex flex-column h-100">
+                                <div class="row mb-4">
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="text-white-50 small text-uppercase">System Clock</div>
+                                            <div class="metric-value" id="sysClock">0</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="text-white-50 small text-uppercase">Avg Waiting Time</div>
+                                            <div class="metric-value" id="liveAWT">0.00</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="text-white-50 small text-uppercase">Avg Turnaround</div>
+                                            <div class="metric-value" id="liveATT">0.00</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="metric-card">
+                                            <div class="text-white-50 small text-uppercase">Ctx Switches</div>
+                                            <div class="metric-value" id="liveCS">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h5 class="text-neon mb-2">Ready Queue</h5>
+                                <div class="glass-card p-3 mb-4 d-flex gap-2 overflow-x-auto align-items-center"
+                                    id="readyQueueContainer" style="min-height: 80px;">
+                                    <span class="text-white-50">Empty</span>
+                                </div>
+
+                                <h5 class="text-neon mb-2">Live CPU Execution</h5>
+                                <div class="glass-card p-0 overflow-hidden position-relative" style="height: 60px;">
+                                    <div id="liveGanttContainer"
+                                        class="d-flex h-100 w-100 position-absolute top-0 start-0">
+                                        <!-- Gantt blocks will be appended here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Gantt Chart -->
+                        <div class="tab-pane fade h-100" id="gantt" role="tabpanel">
+                            <div class="d-flex flex-column h-100">
+                                <h2 class="text-neon mb-3">Full Gantt View & What-If Preview</h2>
+                                <div class="glass-card p-3 w-100 position-relative mb-3"
+                                    style="height: 100px; overflow-x: auto; overflow-y: hidden;">
+                                    <div id="ghostGanttContainer"
+                                        class="d-flex h-100 position-absolute top-0 start-0 opacity-50"
+                                        style="z-index: 1;"></div>
+                                    <div id="fullGanttContainer" class="d-flex h-100 position-absolute top-0 start-0"
+                                        style="z-index: 2;"></div>
+                                </div>
+                                <p class="text-white-50 small"><i data-lucide="info" class="w-4 h-4 d-inline"></i> Ghost
+                                    Gantt shows background schedule projections when adjusting Burst Time sliders in the
+                                    Process Table.</p>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Process Table -->
+                        <div class="tab-pane fade h-100" id="table" role="tabpanel">
+                            <div class="d-flex flex-column h-100">
+                                <h2 class="text-neon mb-3">Process Results</h2>
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-hover table-bordered border-secondary"
+                                        style="--bs-table-bg: transparent;">
+                                        <thead>
+                                            <tr>
+                                                <th>PID</th>
+                                                <th>AT</th>
+                                                <th>BT</th>
+                                                <th>Priority</th>
+                                                <th>CT</th>
+                                                <th>TAT</th>
+                                                <th>WT</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="processTableBody">
+                                            <!-- Rows added dynamically -->
+                                            <tr>
+                                                <td colspan="8" class="text-center text-white-50 py-4">No processes
+                                                    added yet.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 4: Algorithm Race -->
+                        <div class="tab-pane fade h-100" id="race" role="tabpanel">
+                            <div class="d-flex flex-column h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h2 class="text-neon m-0">Comparison Dashboard</h2>
+                                    <div>
+                                        <button class="btn btn-outline-info me-2" onclick="exportReport()">
+                                            <i data-lucide="download" class="w-4 h-4 d-inline"></i> Export Report
+                                        </button>
+                                        <button class="btn btn-neon px-4" onclick="runRace()">
+                                            <i data-lucide="play-circle" class="w-4 h-4 d-inline"></i> RUN ALL
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="row flex-grow-1 overflow-y-auto">
+                                    <!-- Race Tracks -->
+                                    <div class="col-lg-6 mb-3">
+                                        <div class="glass-card p-3 h-100">
+                                            <h5 class="text-white mb-3">Algorithm Race</h5>
+                                            <div id="raceTracksContainer" class="d-flex flex-column gap-3">
+                                                <div class="text-white-50 text-center py-5">Click "RUN ALL" to start the
+                                                    race.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Analytics & Recommendation -->
+                                    <div class="col-lg-6 mb-3">
+                                        <div class="glass-card p-3 h-100 d-flex flex-column gap-3">
+                                            <div>
+                                                <canvas id="raceChart" height="200"></canvas>
+                                            </div>
+                                            <div class="glass-card p-3" style="background: rgba(0,0,0,0.3)">
+                                                <h6 class="text-neon mb-2 d-flex align-items-center gap-2"><i
+                                                        data-lucide="cpu" class="w-4 h-4"></i> AI Recommendation Engine
+                                                </h6>
+                                                <div id="recommendationText" class="text-white-50">Awaiting simulation
+                                                    data...</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- App Script -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Color Management
+        const colors = {
+            fcfs: 'var(--color-fcfs)',
+            sjf: 'var(--color-sjf)',
+            srtf: 'var(--color-srtf)',
+            rr: 'var(--color-rr)',
+            priority: 'var(--color-priority)'
+        };
+
+        const glows = {
+            fcfs: 'rgba(0, 209, 255, 0.4)',
+            sjf: 'rgba(112, 0, 255, 0.4)',
+            srtf: 'rgba(255, 0, 122, 0.4)',
+            rr: 'rgba(57, 255, 20, 0.4)',
+            priority: 'rgba(255, 215, 0, 0.4)'
+        };
+
+        function changeAlgorithm() {
+            const algo = document.getElementById('algorithmSelect').value;
+            const root = document.documentElement;
+
+            // Update CSS Variables for Theme
+            root.style.setProperty('--active-color', colors[algo]);
+            root.style.setProperty('--active-color-glow', glows[algo]);
+
+            // Toggle Quantum Input for RR
+            const quantumGroup = document.getElementById('quantumInputGroup');
+            if (algo === 'rr') {
+                quantumGroup.classList.remove('d-none');
+            } else {
+                quantumGroup.classList.add('d-none');
+            }
+            drawGhostGantt();
+        }
+
+        let processes = [];
+        let animationFrameId = null;
+        let pCounter = 1;
+
+        function addProcess() {
+            const pidInput = document.getElementById('pid');
+            const atInput = document.getElementById('arrivalTime');
+            const btInput = document.getElementById('burstTime');
+            const prioInput = document.getElementById('priority');
+
+            const pid = pidInput.value || `P${pCounter}`;
+            const at = parseInt(atInput.value);
+            const bt = parseInt(btInput.value);
+            const priority = parseInt(prioInput.value);
+
+            if (isNaN(at) || isNaN(bt) || isNaN(priority) || bt <= 0) {
+                alert('Please enter valid positive numbers for Time/Priority.');
+                return;
+            }
+
+            processes.push({
+                id: pid,
+                at: at,
+                bt: bt,
+                priority: priority,
+                rt: bt,
+                ct: 0,
+                tat: 0,
+                wt: 0,
+                startTime: -1,
+                isCompleted: false
+            });
+
+            pCounter++;
+            pidInput.value = `P${pCounter}`;
+            updateProcessTable();
+        }
+
+        function loadSample() {
+            processes = [
+                { id: 'P1', at: 0, bt: 5, priority: 2, rt: 5, ct: 0, tat: 0, wt: 0, startTime: -1, isCompleted: false },
+                { id: 'P2', at: 1, bt: 3, priority: 1, rt: 3, ct: 0, tat: 0, wt: 0, startTime: -1, isCompleted: false },
+                { id: 'P3', at: 2, bt: 8, priority: 4, rt: 8, ct: 0, tat: 0, wt: 0, startTime: -1, isCompleted: false },
+                { id: 'P4', at: 3, bt: 6, priority: 3, rt: 6, ct: 0, tat: 0, wt: 0, startTime: -1, isCompleted: false }
+            ];
+            pCounter = 5;
+            document.getElementById('pid').value = `P${pCounter}`;
+            updateProcessTable();
+        }
+
+        function clearProcesses() {
+            processes = [];
+            pCounter = 1;
+            document.getElementById('pid').value = `P${pCounter}`;
+            updateProcessTable();
+            resetSimulationUI();
+        }
+
+        function updateProcessTable(currentTime = 0, isSimulating = false) {
+            const tbody = document.getElementById('processTableBody');
+            if (processes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-white-50 py-4">No processes added yet.</td></tr>';
+                return;
+            }
+
+            let totalWt = 0;
+            let completedCount = 0;
+            processes.forEach(p => {
+                if (p.isCompleted) { totalWt += p.wt; completedCount++; }
+            });
+            let avgWT = completedCount > 0 ? (totalWt / completedCount) : 0;
+
+            tbody.innerHTML = '';
+            processes.forEach(p => {
+                let currentWaitTime = p.isCompleted ? p.wt : (currentTime >= p.at ? (currentTime - p.at - (p.bt - p.rt)) : 0);
+                let isStarving = !p.isCompleted && currentWaitTime > (3 * p.bt) && currentTime > 0;
+                let trClass = isStarving ? 'starvation-glow' : '';
+
+                let statusBadge = p.isCompleted ? '<span class="badge bg-success text-dark">Done</span>' : '<span class="badge bg-secondary">Pending</span>';
+
+                // Performance Badges
+                if (p.isCompleted) {
+                    if (p.wt === 0) {
+                        statusBadge += ' <span class="badge bg-info text-dark">Optimal</span>';
+                    } else if (p.wt < p.bt) {
+                        statusBadge += ' <span class="badge bg-primary">Efficient</span>';
+                    } else if (p.wt > 3 * p.bt) {
+                        statusBadge += ' <span class="badge bg-danger">Starving</span>';
+                    }
+                }
+
+                let btDisplay = isSimulating ? p.bt : `<div class="d-flex align-items-center gap-2"><input type="range" class="form-range" min="1" max="20" value="${p.bt}" oninput="updateBT('${p.id}', this.value)" style="max-width: 80px;"> <span>${p.bt}</span></div>`;
+
+                tbody.innerHTML += `
+                    <tr class="${trClass}">
+                        <td>${p.id}</td>
+                        <td>${p.at}</td>
+                        <td>${btDisplay}</td>
+                        <td>${p.priority}</td>
+                        <td>${p.ct || '-'}</td>
+                        <td>${p.tat || '-'}</td>
+                        <td>${p.wt || '-'}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateBT(id, newBT) {
+            let p = processes.find(x => x.id === id);
+            if (p) {
+                p.bt = parseInt(newBT);
+                p.rt = p.bt; // reset RT
+            }
+            updateProcessTable(0, false);
+            drawGhostGantt();
+        }
+
+        function drawGhostGantt() {
+            if (processes.length === 0) return;
+            const algo = document.getElementById('algorithmSelect').value;
+            const quantum = parseInt(document.getElementById('timeQuantum').value);
+
+            let simProcs = processes.map(p => ({ ...p, rt: p.bt, isCompleted: false, startTime: -1, ct: 0, tat: 0, wt: 0 }));
+            let time = 0;
+            let completed = 0;
+            const n = simProcs.length;
+
+            let currentProcess = null;
+            let currentProcessTime = 0;
+            let readyQueue = [];
+            let rrQueue = [];
+            let sortedProcs = [...simProcs].sort((a, b) => a.at - b.at);
+
+            let ganttBlocks = [];
+            let currentBlock = null;
+
+            while (completed < n && time < 200) {
+                sortedProcs.forEach(p => {
+                    if (p.at === time && !readyQueue.includes(p)) {
+                        readyQueue.push(p);
+                        if (algo === 'rr') rrQueue.push(p);
+                    }
+                });
+
+                let prevProcess = currentProcess;
+
+                if (algo === 'fcfs') {
+                    if (!currentProcess) {
+                        let available = readyQueue.filter(p => !p.isCompleted);
+                        if (available.length > 0) currentProcess = available[0];
+                    }
+                } else if (algo === 'sjf') {
+                    if (!currentProcess) {
+                        let available = readyQueue.filter(p => !p.isCompleted);
+                        if (available.length > 0) {
+                            available.sort((a, b) => a.bt - b.bt || a.at - b.at);
+                            currentProcess = available[0];
+                        }
+                    }
+                } else if (algo === 'srtf') {
+                    let available = readyQueue.filter(p => !p.isCompleted);
+                    if (available.length > 0) {
+                        available.sort((a, b) => a.rt - b.rt || a.at - b.at);
+                        currentProcess = available[0];
+                    } else currentProcess = null;
+                } else if (algo === 'priority') {
+                    if (!currentProcess) {
+                        let available = readyQueue.filter(p => !p.isCompleted);
+                        if (available.length > 0) {
+                            available.sort((a, b) => a.priority - b.priority || a.at - b.at);
+                            currentProcess = available[0];
+                        }
+                    }
+                } else if (algo === 'rr') {
+                    if (!currentProcess && rrQueue.length > 0) {
+                        currentProcess = rrQueue.shift();
+                        currentProcessTime = 0;
+                    }
+                }
+
+                if (currentProcess !== prevProcess || (!currentProcess && !currentBlock)) {
+                    if (currentBlock) ganttBlocks.push(currentBlock);
+
+                    if (currentProcess) {
+                        currentBlock = { id: currentProcess.id, width: 40, color: colors[algo] };
+                    } else if (prevProcess || !currentBlock) {
+                        currentBlock = { id: 'IDLE', width: 40, color: 'transparent' };
+                    }
+                } else if (currentBlock) {
+                    currentBlock.width += 40;
+                }
+
+                time++;
+                if (currentProcess) {
+                    if (currentProcess.startTime === -1) currentProcess.startTime = time - 1;
+                    currentProcess.rt--;
+                    currentProcessTime++;
+
+                    if (currentProcess.rt === 0) {
+                        currentProcess.ct = time;
+                        currentProcess.tat = currentProcess.ct - currentProcess.at;
+                        currentProcess.wt = currentProcess.tat - currentProcess.bt;
+                        currentProcess.isCompleted = true;
+                        completed++;
+                        currentProcess = null;
+                    } else if (algo === 'rr' && currentProcessTime === quantum) {
+                        sortedProcs.forEach(p => {
+                            if (p.at === time && !readyQueue.includes(p)) {
+                                readyQueue.push(p);
+                                rrQueue.push(p);
+                            }
+                        });
+                        rrQueue.push(currentProcess);
+                        currentProcess = null;
+                    }
+                }
+            }
+            if (currentBlock) ganttBlocks.push(currentBlock);
+
+            const ghostEl = document.getElementById('ghostGanttContainer');
+            if (ghostEl) {
+                ghostEl.innerHTML = '';
+                ganttBlocks.forEach(b => {
+                    ghostEl.innerHTML += `<div class="ghost-gantt-block" style="width: ${b.width}px; background-color: ${b.color === 'transparent' ? 'transparent' : 'rgba(255,255,255,0.1)'}">${b.id}</div>`;
+                });
+            }
+        }
+
+        function resetSimulationUI() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            document.getElementById('sysClock').innerText = '0';
+            document.getElementById('liveAWT').innerText = '0.00';
+            document.getElementById('liveATT').innerText = '0.00';
+            document.getElementById('liveCS').innerText = '0';
+            document.getElementById('readyQueueContainer').innerHTML = '<span class="text-white-50">Empty</span>';
+            document.getElementById('liveGanttContainer').innerHTML = '';
+            document.getElementById('fullGanttContainer').innerHTML = '';
+            processes.forEach(p => {
+                p.rt = p.bt;
+                p.ct = 0;
+                p.tat = 0;
+                p.wt = 0;
+                p.startTime = -1;
+                p.isCompleted = false;
+            });
+            updateProcessTable(0, false);
+            document.getElementById('startSimBtn').disabled = false;
+            drawGhostGantt();
+        }
+
+        function startSimulation() {
+            if (processes.length === 0) {
+                alert("Add processes first!");
+                return;
+            }
+            resetSimulationUI();
+            document.getElementById('startSimBtn').disabled = true;
+
+            // Switch to live tab
+            const liveTab = new bootstrap.Tab(document.getElementById('live-tab'));
+            liveTab.show();
+
+            const algo = document.getElementById('algorithmSelect').value;
+            const quantum = parseInt(document.getElementById('timeQuantum').value);
+
+            let time = 0;
+            let completed = 0;
+            let contextSwitches = 0;
+            const n = processes.length;
+
+            let currentProcess = null;
+            let currentProcessTime = 0;
+            let readyQueue = [];
+            let rrQueue = [];
+
+            const clockEl = document.getElementById('sysClock');
+            const csEl = document.getElementById('liveCS');
+            const rqEl = document.getElementById('readyQueueContainer');
+            const ganttEl = document.getElementById('liveGanttContainer');
+            const fullGanttEl = document.getElementById('fullGanttContainer');
+
+            let sortedProcs = [...processes].sort((a, b) => a.at - b.at);
+            let currentBlock = null;
+            let currentFullBlock = null;
+
+            let lastTickTime = 0;
+            const TICK_DURATION = 500; // 500ms per time unit
+
+            function gameLoop(timestamp) {
+                if (!lastTickTime) lastTickTime = timestamp;
+
+                if (timestamp - lastTickTime >= TICK_DURATION) {
+                    lastTickTime = timestamp;
+
+                    // 1. Check for arrivals
+                    sortedProcs.forEach(p => {
+                        if (p.at === time && !readyQueue.includes(p)) {
+                            readyQueue.push(p);
+                            if (algo === 'rr') rrQueue.push(p);
+                        }
+                    });
+
+                    // Update Ready Queue UI
+                    rqEl.innerHTML = '';
+                    let displayQueue = algo === 'rr' ? rrQueue : readyQueue.filter(p => !p.isCompleted && p !== currentProcess);
+                    if (displayQueue.length === 0) {
+                        rqEl.innerHTML = '<span class="text-white-50">Empty</span>';
+                    } else {
+                        displayQueue.forEach(p => {
+                            rqEl.innerHTML += `<div class="ready-queue-item">${p.id}</div>`;
+                        });
+                    }
+
+                    // 2. Process execution logic
+                    let prevProcess = currentProcess;
+
+                    if (completed === n) {
+                        finalizeSimulation();
+                        return; // Stop animation loop
+                    }
+
+                    if (algo === 'fcfs') {
+                        if (!currentProcess) {
+                            let available = readyQueue.filter(p => !p.isCompleted);
+                            if (available.length > 0) currentProcess = available[0];
+                        }
+                    } else if (algo === 'sjf') {
+                        if (!currentProcess) {
+                            let available = readyQueue.filter(p => !p.isCompleted);
+                            if (available.length > 0) {
+                                available.sort((a, b) => a.bt - b.bt || a.at - b.at);
+                                currentProcess = available[0];
+                            }
+                        }
+                    } else if (algo === 'srtf') {
+                        let available = readyQueue.filter(p => !p.isCompleted);
+                        if (available.length > 0) {
+                            available.sort((a, b) => a.rt - b.rt || a.at - b.at);
+                            currentProcess = available[0];
+                        } else currentProcess = null;
+                    } else if (algo === 'priority') {
+                        if (!currentProcess) {
+                            let available = readyQueue.filter(p => !p.isCompleted);
+                            if (available.length > 0) {
+                                available.sort((a, b) => a.priority - b.priority || a.at - b.at);
+                                currentProcess = available[0];
+                            }
+                        }
+                    } else if (algo === 'rr') {
+                        if (!currentProcess && rrQueue.length > 0) {
+                            currentProcess = rrQueue.shift();
+                            currentProcessTime = 0;
+                        }
+                    }
+
+                    if (currentProcess !== prevProcess && time > 0) {
+                        contextSwitches++;
+                        csEl.innerText = contextSwitches;
+
+                        // Highlight Visualizer for Teachers
+                        const metricCard = csEl.closest('.metric-card');
+                        if (metricCard) {
+                            metricCard.style.transition = 'all 0.2s ease';
+                            metricCard.style.backgroundColor = 'rgba(255, 0, 122, 0.4)';
+                            metricCard.style.transform = 'scale(1.05)';
+                            setTimeout(() => {
+                                metricCard.style.backgroundColor = 'rgba(15, 23, 42, 0.4)';
+                                metricCard.style.transform = 'scale(1)';
+                            }, 300);
+                        }
+                    }
+
+                    // 3. Gantt Chart Drawing
+                    if (currentProcess !== prevProcess || (!currentProcess && !currentBlock)) {
+                        if (currentProcess) {
+                            currentBlock = document.createElement('div');
+                            currentBlock.className = 'gantt-block';
+                            currentBlock.style.backgroundColor = colors[algo];
+                            currentBlock.style.width = '0px';
+                            currentBlock.innerHTML = currentProcess.id;
+                            ganttEl.appendChild(currentBlock);
+
+                            currentFullBlock = document.createElement('div');
+                            currentFullBlock.className = 'gantt-block';
+                            currentFullBlock.style.backgroundColor = colors[algo];
+                            currentFullBlock.style.width = '0px';
+                            currentFullBlock.innerHTML = currentProcess.id;
+                            fullGanttEl.appendChild(currentFullBlock);
+                        } else if (prevProcess || !currentBlock) {
+                            currentBlock = document.createElement('div');
+                            currentBlock.className = 'gantt-block text-white-50';
+                            currentBlock.style.backgroundColor = 'transparent';
+                            currentBlock.style.width = '0px';
+                            currentBlock.style.border = '1px dashed rgba(255,255,255,0.2)';
+                            currentBlock.innerHTML = 'IDLE';
+                            ganttEl.appendChild(currentBlock);
+
+                            currentFullBlock = document.createElement('div');
+                            currentFullBlock.className = 'gantt-block text-white-50';
+                            currentFullBlock.style.backgroundColor = 'transparent';
+                            currentFullBlock.style.width = '0px';
+                            currentFullBlock.style.border = '1px dashed rgba(255,255,255,0.2)';
+                            currentFullBlock.innerHTML = 'IDLE';
+                            fullGanttEl.appendChild(currentFullBlock);
+                        }
+                    }
+
+                    if (currentBlock) {
+                        let currentWidth = parseInt(currentBlock.style.width || '0');
+                        currentBlock.style.width = (currentWidth + 40) + 'px';
+                        if (currentFullBlock) currentFullBlock.style.width = (currentWidth + 40) + 'px';
+                    }
+
+                    // 4. Update Time and Process status
+                    time++;
+                    clockEl.innerText = time;
+
+                    if (currentProcess) {
+                        if (currentProcess.startTime === -1) currentProcess.startTime = time - 1;
+
+                        currentProcess.rt--;
+                        currentProcessTime++;
+
+                        if (currentProcess.rt === 0) {
+                            currentProcess.ct = time;
+                            currentProcess.tat = currentProcess.ct - currentProcess.at;
+                            currentProcess.wt = currentProcess.tat - currentProcess.bt;
+                            currentProcess.isCompleted = true;
+                            completed++;
+
+                            updateLiveMetrics();
+                            updateProcessTable(time, true);
+                            currentProcess = null;
+                        } else if (algo === 'rr' && currentProcessTime === quantum) {
+                            sortedProcs.forEach(p => {
+                                if (p.at === time && !readyQueue.includes(p)) {
+                                    readyQueue.push(p);
+                                    rrQueue.push(p);
+                                }
+                            });
+                            rrQueue.push(currentProcess);
+                            currentProcess = null;
+                        }
+                    }
+                }
+
+                // Request the next frame
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+
+            // Start the engine
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function updateLiveMetrics() {
+            let totalTat = 0, totalWt = 0, completedCount = 0;
+            processes.forEach(p => {
+                if (p.isCompleted) {
+                    totalTat += p.tat;
+                    totalWt += p.wt;
+                    completedCount++;
+                }
+            });
+            if (completedCount > 0) {
+                document.getElementById('liveAWT').innerText = (totalWt / completedCount).toFixed(2);
+                document.getElementById('liveATT').innerText = (totalTat / completedCount).toFixed(2);
+            }
+        }
+
+        function finalizeSimulation() {
+            updateLiveMetrics();
+            updateProcessTable();
+            document.getElementById('startSimBtn').disabled = false;
+        }
+
+        let raceChartInstance = null;
+
+        // Alias so both onclick names work
+        function runAllAlgorithms() { runRace(); }
+
+        function runRace() {
+            if (processes.length === 0) {
+                alert("Add processes first!");
+                return;
+            }
+
+            const algos = ['fcfs', 'sjf', 'srtf', 'rr', 'priority'];
+            const algoNames = ['FCFS', 'SJF', 'SRTF', 'RR', 'Priority'];
+            const quantum = parseInt(document.getElementById('timeQuantum').value);
+
+            let results = [];
+            let raceTracksHTML = '';
+
+            algos.forEach((algo, index) => {
+                let res = simulateSynchronous(algo, quantum);
+                results.push(res);
+
+                // Build animated Gantt race track
+                let trackHtml = `<div class="d-flex align-items-center gap-2 mb-1">
+                    <div style="width: 72px; font-size: 0.75rem; font-weight: bold; color: ${colors[algo]}; flex-shrink:0;">${algoNames[index]}</div>
+                    <div class="d-flex flex-grow-1 overflow-hidden" style="height: 28px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; background: rgba(0,0,0,0.3);">`;
+
+                res.gantt.forEach(b => {
+                    const w = Math.max(4, (b.width / 40) * 14);
+                    const bg = b.color === 'transparent' ? 'rgba(255,255,255,0.04)' : colors[algo];
+                    const label = b.id === 'IDLE' ? '' : b.id;
+                    trackHtml += `<div style="width:${w}px; min-width:${w}px; background-color:${bg}; border-right:1px solid rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#000; font-weight:bold; overflow:hidden;">${label}</div>`;
+                });
+
+                trackHtml += `</div>
+                    <div style="width:56px; font-size:0.75rem; color:rgba(255,255,255,0.6); flex-shrink:0; text-align:right;">AWT: ${res.awt.toFixed(1)}</div>
+                </div>`;
+                raceTracksHTML += trackHtml;
+            });
+
+            // Append summary metrics table below tracks
+            let winnerIdx = results.reduce((best, r, i) => r.awt < results[best].awt ? i : best, 0);
+            raceTracksHTML += `<hr style="border-color:rgba(255,255,255,0.1); margin:12px 0;">`;
+            raceTracksHTML += `<table class="table table-sm table-dark mb-0" style="--bs-table-bg: transparent; font-size:0.78rem;">`;
+            raceTracksHTML += `<thead><tr><th>Algorithm</th><th>AWT</th><th>ATT</th><th>Winner?</th></tr></thead><tbody>`;
+            algos.forEach((algo, i) => {
+                const isWinner = i === winnerIdx;
+                raceTracksHTML += `<tr style="${isWinner ? `background: rgba(255,215,0,0.08);` : ''}"><td style="color:${colors[algo]}; font-weight:bold;">${algoNames[i]}</td><td>${results[i].awt.toFixed(2)}</td><td>${results[i].att.toFixed(2)}</td><td>${isWinner ? '🏆 Best' : '-'}</td></tr>`;
+            });
+            raceTracksHTML += `</tbody></table>`;
+
+            document.getElementById('raceTracksContainer').innerHTML = raceTracksHTML;
+
+            // Update Chart
+            updateRaceChart(algoNames, results);
+
+            // Generate Recommendation
+            generateRecommendation(algoNames, results);
+
+            lucide.createIcons();
+        }
+
+        function simulateSynchronous(algo, quantum) {
+            let simProcs = processes.map(p => ({ ...p, rt: p.bt, isCompleted: false, startTime: -1, ct: 0, tat: 0, wt: 0 }));
+            let time = 0;
+            let completed = 0;
+            const n = simProcs.length;
+
+            let currentProcess = null;
+            let currentProcessTime = 0;
+            let readyQueue = [];
+            let rrQueue = [];
+            let sortedProcs = [...simProcs].sort((a, b) => a.at - b.at);
+
+            let ganttBlocks = [];
+            let currentBlock = null;
+
+            while (completed < n && time < 1000) {
+                sortedProcs.forEach(p => {
+                    if (p.at === time && !readyQueue.includes(p)) {
+                        readyQueue.push(p);
+                        if (algo === 'rr') rrQueue.push(p);
+                    }
+                });
+
+                let prevProcess = currentProcess;
+
+                if (algo === 'fcfs') {
+                    if (!currentProcess) {
+                        let available = readyQueue.filter(p => !p.isCompleted);
+                        if (available.length > 0) currentProcess = available[0];
+                    }
+                } else if (algo === 'sjf') {
+                    if (!currentProcess) {
+                        let available = readyQueue.filter(p => !p.isCompleted);
+                        if (available.length > 0) {
+                            available.sort((a, b) => a.bt - b.bt || a.at - b.at);
+                            currentProcess = available[0];
+                        }
+                    }
+                } else if (algo === 'srtf') {
+                    let available = readyQueue.filter(p => !p.isCompleted);
+                    if (available.length > 0) {
+                        available.sort((a, b) => a.rt - b.rt || a.at - b.at);
+                        currentProcess = available[0];
+                    } else currentProcess = null;
+                } else if (algo === 'priority') {
+                    if (!currentProcess) {
+                        let available = readyQueue.filter(p => !p.isCompleted);
+                        if (available.length > 0) {
+                            available.sort((a, b) => a.priority - b.priority || a.at - b.at);
+                            currentProcess = available[0];
+                        }
+                    }
+                } else if (algo === 'rr') {
+                    if (!currentProcess && rrQueue.length > 0) {
+                        currentProcess = rrQueue.shift();
+                        currentProcessTime = 0;
+                    }
+                }
+
+                if (currentProcess !== prevProcess || (!currentProcess && !currentBlock)) {
+                    if (currentBlock) ganttBlocks.push(currentBlock);
+
+                    if (currentProcess) {
+                        currentBlock = { id: currentProcess.id, width: 40, color: colors[algo] };
+                    } else if (prevProcess || !currentBlock) {
+                        currentBlock = { id: 'IDLE', width: 40, color: 'transparent' };
+                    }
+                } else if (currentBlock) {
+                    currentBlock.width += 40;
+                }
+
+                time++;
+                if (currentProcess) {
+                    if (currentProcess.startTime === -1) currentProcess.startTime = time - 1;
+                    currentProcess.rt--;
+                    currentProcessTime++;
+
+                    if (currentProcess.rt === 0) {
+                        currentProcess.ct = time;
+                        currentProcess.tat = currentProcess.ct - currentProcess.at;
+                        currentProcess.wt = currentProcess.tat - currentProcess.bt;
+                        currentProcess.isCompleted = true;
+                        completed++;
+                        currentProcess = null;
+                    } else if (algo === 'rr' && currentProcessTime === quantum) {
+                        sortedProcs.forEach(p => {
+                            if (p.at === time && !readyQueue.includes(p)) {
+                                readyQueue.push(p);
+                                rrQueue.push(p);
+                            }
+                        });
+                        rrQueue.push(currentProcess);
+                        currentProcess = null;
+                    }
+                }
+            }
+            if (currentBlock) ganttBlocks.push(currentBlock);
+
+            let totalWt = 0, totalTat = 0;
+            simProcs.forEach(p => { totalWt += p.wt; totalTat += p.tat; });
+
+            return {
+                gantt: ganttBlocks,
+                awt: totalWt / n,
+                att: totalTat / n
+            };
+        }
+
+        function updateRaceChart(labels, results) {
+            const ctx = document.getElementById('raceChart').getContext('2d');
+
+            const awtData = results.map(r => parseFloat(r.awt.toFixed(2)));
+            const attData = results.map(r => parseFloat(r.att.toFixed(2)));
+
+            // Per-algorithm neon border colors
+            const borderColors = ['#00D1FF', '#7000FF', '#FF007A', '#39FF14', '#FFD700'];
+            const bgColors = [
+                'rgba(0, 209, 255, 0.65)', 'rgba(112, 0, 255, 0.65)',
+                'rgba(255, 0, 122, 0.65)', 'rgba(57, 255, 20, 0.65)',
+                'rgba(255, 215, 0, 0.65)'
+            ];
+
+            if (raceChartInstance) raceChartInstance.destroy();
+
+            raceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Avg Waiting Time (AWT)',
+                            data: awtData,
+                            backgroundColor: bgColors,
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Avg Turnaround Time (ATT)',
+                            data: attData,
+                            backgroundColor: bgColors.map(c => c.replace('0.65', '0.25')),
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.08)' },
+                            ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } },
+                            title: { display: true, text: 'Time Units', color: 'rgba(255,255,255,0.5)' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.06)' },
+                            ticks: { color: 'rgba(255,255,255,0.85)', font: { size: 12, weight: 'bold' } }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: 'rgba(255,255,255,0.85)', padding: 16, font: { size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} units`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateRecommendation(labels, results) {
+            // Find winner (lowest AWT)
+            let minAwtIdx = results.reduce((best, r, i) => r.awt < results[best].awt ? i : best, 0);
+            // Find worst (highest AWT) for percentage calc
+            let maxAwtIdx = results.reduce((worst, r, i) => r.awt > results[worst].awt ? i : worst, 0);
+
+            const winner = labels[minAwtIdx];
+            const loser = labels[maxAwtIdx];
+            const winnerAWT = results[minAwtIdx].awt;
+            const avgAWT = results.reduce((sum, r) => sum + r.awt, 0) / results.length;
+            const pctBetterThanAvg = avgAWT > 0 ? Math.round(((avgAWT - winnerAWT) / avgAWT) * 100) : 0;
+            const pctBetterThanWorst = results[maxAwtIdx].awt > 0 ? Math.round(((results[maxAwtIdx].awt - winnerAWT) / results[maxAwtIdx].awt) * 100) : 0;
+
+            const winnerColor = colors[winner.toLowerCase()] || '#fff';
+
+            let reasonMap = {
+                'SRTF': 'SRTF is provably optimal for minimizing AWT — by always running the process with the shortest remaining time, it prevents long jobs from blocking short ones (eliminates the convoy effect).',
+                'SJF': 'SJF minimizes average waiting time non-preemptively. With your burst distribution, shorter jobs finished first, keeping the queue lean.',
+                'RR': 'Round Robin performed best here. Your processes have similar burst times, making time-slice fairness very efficient with minimal idle gaps.',
+                'FCFS': 'FCFS won because your processes arrived in burst-time order (shortest first), naturally avoiding the convoy effect without any complex scheduling.',
+                'Priority': 'Priority Scheduling won because your high-priority processes happened to have short burst times, delivering both fairness and efficiency.'
+            };
+
+            const reason = reasonMap[winner] || 'This algorithm matched well with the current workload characteristics.';
+
+            const html = `
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <span style="font-size:1.4rem;">🏆</span>
+                    <div>
+                        <div style="font-size:0.85rem; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px;">Recommendation Engine</div>
+                        <div style="font-size:1rem; font-weight:bold; margin-top:2px;">
+                            Based on your workload, <span style="color:${winnerColor};">${winner}</span> is the mathematical winner.
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-3 mb-2" style="flex-wrap:wrap;">
+                    <div class="text-center" style="background:rgba(255,215,0,0.08); border:1px solid rgba(255,215,0,0.2); border-radius:8px; padding:8px 14px;">
+                        <div style="font-size:1.4rem; font-weight:bold; color:${winnerColor};">${winnerAWT.toFixed(2)}</div>
+                        <div style="font-size:0.7rem; color:rgba(255,255,255,0.5);">AWT (units)</div>
+                    </div>
+                    <div class="text-center" style="background:rgba(57,255,20,0.06); border:1px solid rgba(57,255,20,0.2); border-radius:8px; padding:8px 14px;">
+                        <div style="font-size:1.4rem; font-weight:bold; color:#39FF14;">${pctBetterThanAvg}%</div>
+                        <div style="font-size:0.7rem; color:rgba(255,255,255,0.5);">Better than avg</div>
+                    </div>
+                    <div class="text-center" style="background:rgba(255,0,122,0.06); border:1px solid rgba(255,0,122,0.2); border-radius:8px; padding:8px 14px;">
+                        <div style="font-size:1.4rem; font-weight:bold; color:#FF007A;">${pctBetterThanWorst}%</div>
+                        <div style="font-size:0.7rem; color:rgba(255,255,255,0.5);">Better than ${loser}</div>
+                    </div>
+                </div>
+                <p style="font-size:0.82rem; color:rgba(255,255,255,0.65); margin:0; line-height:1.6;">${reason}</p>
+            `;
+
+            document.getElementById('recommendationText').innerHTML = html;
+        }
+
+        function exportReport() {
+            if (!raceChartInstance) {
+                alert("Please RUN ALL algorithms first to generate a report.");
+                return;
+            }
+
+            const chartCanvas = document.getElementById('raceChart');
+            const dataUrl = chartCanvas.toDataURL('image/png');
+
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'CPU_Scheduling_Report.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            alert("Exported Race Chart as PNG. (A full DOM export requires an external library like html2canvas).");
+        }
+
+        // Initialize theme
+        changeAlgorithm();
+    </script>
+</body>
+
+</html>
