@@ -230,6 +230,96 @@
             border: 1px dashed rgba(255, 255, 255, 0.3);
         }
 
+        .timeline-marker {
+            color: #FFFFFF !important;
+            font-weight: 900 !important;
+            font-size: 26px !important;
+            position: absolute;
+            bottom: -50px;
+            z-index: 1000;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .junction-line {
+            position: absolute;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.3);
+            top: 0;
+            height: 110px;
+            z-index: 5;
+            pointer-events: none;
+            transform: translateX(-50%);
+        }
+
+        .junction-line.divider {
+            background: rgba(255, 255, 255, 0.5) !important;
+            height: 40px !important;
+            z-index: 6;
+        }
+
+        #live-timeline {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            margin-top: 8px;
+            margin-left: 15px !important;
+            overflow: visible !important;
+            padding-left: 5px !important;
+            z-index: 10;
+        }
+
+        #gantt-timeline {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            margin-top: 8px;
+            overflow: visible !important;
+            padding-left: 25px !important;
+            z-index: 10;
+        }
+
+        #live-timeline span,
+        #gantt-timeline div.timeline-marker {
+            position: absolute;
+            color: #FFFFFF;
+            font-weight: 900;
+            font-size: 26px;
+            z-index: 1000;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .gantt-wrapper {
+            height: 200px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            position: relative;
+        }
+
+        .gantt-container,
+        #liveGanttContainer,
+        #fullGanttContainer,
+        #ghostGanttContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            min-width: 100%;
+            height: 120px;
+            padding-left: 20px !important;
+            padding-bottom: 0 !important;
+            overflow: visible !important;
+        }
+
+        #ghostGanttContainer .junction-line,
+        #fullGanttContainer .junction-line {
+            height: 40px;
+        }
+
         @media (max-width: 991.98px) {
             .main-container {
                 height: auto;
@@ -404,11 +494,12 @@
                                 </div>
 
                                 <h5 class="text-neon mb-2">Live CPU Execution</h5>
-                                <div class="glass-card p-0 overflow-hidden position-relative" style="height: 60px;">
-                                    <div id="liveGanttContainer"
-                                        class="d-flex h-100 w-100 position-absolute top-0 start-0">
+                                <div class="glass-card p-0 gantt-wrapper">
+                                    <div id="liveGanttContainer" class="d-flex">
                                         <!-- Gantt blocks will be appended here -->
                                     </div>
+                                    <!-- Dedicated timeline axis inside scrollable area -->
+                                    <div id="live-timeline"></div>
                                 </div>
                             </div>
                         </div>
@@ -417,17 +508,13 @@
                         <div class="tab-pane fade h-100" id="gantt" role="tabpanel">
                             <div class="d-flex flex-column h-100">
                                 <h2 class="text-neon mb-3">Full Gantt View & What-If Preview</h2>
-                                <div class="glass-card p-3 w-100 position-relative mb-3"
-                                    style="height: 100px; overflow-x: auto; overflow-y: hidden;">
-                                    <div id="ghostGanttContainer"
-                                        class="d-flex h-100 position-absolute top-0 start-0 opacity-50"
+                                <div class="glass-card p-3 w-100 position-relative mb-3 gantt-wrapper">
+                                    <div id="ghostGanttContainer" class="d-flex h-100 position-absolute top-0 start-0"
                                         style="z-index: 1;"></div>
                                     <div id="fullGanttContainer" class="d-flex h-100 position-absolute top-0 start-0"
                                         style="z-index: 2;"></div>
+                                    <div id="gantt-timeline"></div>
                                 </div>
-                                <p class="text-white-50 small"><i data-lucide="info" class="w-4 h-4 d-inline"></i> Ghost
-                                    Gantt shows background schedule projections when adjusting Burst Time sliders in the
-                                    Process Table.</p>
                             </div>
                         </div>
 
@@ -497,7 +584,7 @@
                                             </div>
                                             <div class="glass-card p-3" style="background: rgba(0,0,0,0.3)">
                                                 <h6 class="text-neon mb-2 d-flex align-items-center gap-2"><i
-                                                        data-lucide="cpu" class="w-4 h-4"></i> AI Recommendation Engine
+                                                        data-lucide="cpu" class="w-4 h-4"></i> Optimal Strategy Engine
                                                 </h6>
                                                 <div id="recommendationText" class="text-white-50">Awaiting simulation
                                                     data...</div>
@@ -647,10 +734,13 @@
                     }
                 }
 
-                let btDisplay = isSimulating ? p.bt : `<div class="d-flex align-items-center gap-2"><input type="range" class="form-range" min="1" max="20" value="${p.bt}" oninput="updateBT('${p.id}', this.value)" style="max-width: 80px;"> <span>${p.bt}</span></div>`;
+                let btDisplay = isSimulating ? p.bt : `<div class="d-flex align-items-center gap-2">
+                    <input type="range" class="form-range" id="bt-slider-${p.id}" min="1" max="20" value="${p.bt}" oninput="updateBT('${p.id}', this.value)" style="max-width: 80px;">
+                    <span id="bt-label-${p.id}">${p.bt}</span>
+                </div>`;
 
                 tbody.innerHTML += `
-                    <tr class="${trClass}">
+                    <tr id="row-${p.id}" class="${trClass}">
                         <td>${p.id}</td>
                         <td>${p.at}</td>
                         <td>${btDisplay}</td>
@@ -670,119 +760,66 @@
                 p.bt = parseInt(newBT);
                 p.rt = p.bt; // reset RT
             }
-            updateProcessTable(0, false);
+
+            // Update the span in-place to prevent losing slider focus
+            let labelSpan = document.getElementById('bt-label-' + id);
+            if (labelSpan) {
+                labelSpan.innerText = newBT;
+            }
+
+            // Draw the ghost gantt live preview
             drawGhostGantt();
+
+            // If the Race tab is active, update the race immediately
+            const racePane = document.getElementById('race');
+            if (racePane && racePane.classList.contains('active')) {
+                runAllAlgorithms();
+            }
         }
 
-        function drawGhostGantt() {
+        function updateWhatIfPreview() {
+            const ghostEl = document.getElementById('ghostGanttContainer');
+            const fullEl = document.getElementById('fullGanttContainer');
+            if (ghostEl) ghostEl.innerHTML = '';
+            if (fullEl) fullEl.innerHTML = ''; // Must clear full Gantt to avoid z-index overlap
+
             if (processes.length === 0) return;
             const algo = document.getElementById('algorithmSelect').value;
             const quantum = parseInt(document.getElementById('timeQuantum').value);
 
-            let simProcs = processes.map(p => ({ ...p, rt: p.bt, isCompleted: false, startTime: -1, ct: 0, tat: 0, wt: 0 }));
-            let time = 0;
-            let completed = 0;
-            const n = simProcs.length;
+            // B. Math
+            let res = simulateSynchronous(algo, quantum);
 
-            let currentProcess = null;
-            let currentProcessTime = 0;
-            let readyQueue = [];
-            let rrQueue = [];
-            let sortedProcs = [...simProcs].sort((a, b) => a.at - b.at);
-
-            let ganttBlocks = [];
-            let currentBlock = null;
-
-            while (completed < n && time < 200) {
-                sortedProcs.forEach(p => {
-                    if (p.at === time && !readyQueue.includes(p)) {
-                        readyQueue.push(p);
-                        if (algo === 'rr') rrQueue.push(p);
-                    }
-                });
-
-                let prevProcess = currentProcess;
-
-                if (algo === 'fcfs') {
-                    if (!currentProcess) {
-                        let available = readyQueue.filter(p => !p.isCompleted);
-                        if (available.length > 0) currentProcess = available[0];
-                    }
-                } else if (algo === 'sjf') {
-                    if (!currentProcess) {
-                        let available = readyQueue.filter(p => !p.isCompleted);
-                        if (available.length > 0) {
-                            available.sort((a, b) => a.bt - b.bt || a.at - b.at);
-                            currentProcess = available[0];
-                        }
-                    }
-                } else if (algo === 'srtf') {
-                    let available = readyQueue.filter(p => !p.isCompleted);
-                    if (available.length > 0) {
-                        available.sort((a, b) => a.rt - b.rt || a.at - b.at);
-                        currentProcess = available[0];
-                    } else currentProcess = null;
-                } else if (algo === 'priority') {
-                    if (!currentProcess) {
-                        let available = readyQueue.filter(p => !p.isCompleted);
-                        if (available.length > 0) {
-                            available.sort((a, b) => a.priority - b.priority || a.at - b.at);
-                            currentProcess = available[0];
-                        }
-                    }
-                } else if (algo === 'rr') {
-                    if (!currentProcess && rrQueue.length > 0) {
-                        currentProcess = rrQueue.shift();
-                        currentProcessTime = 0;
-                    }
+            res.procs.forEach(simP => {
+                const tr = document.getElementById(`row-${simP.id}`);
+                if (tr) {
+                    tr.cells[4].innerText = simP.ct || '-';
+                    tr.cells[5].innerText = simP.tat || '-';
+                    tr.cells[6].innerText = simP.wt || '-';
                 }
+            });
 
-                if (currentProcess !== prevProcess || (!currentProcess && !currentBlock)) {
-                    if (currentBlock) ganttBlocks.push(currentBlock);
-
-                    if (currentProcess) {
-                        currentBlock = { id: currentProcess.id, width: 40, color: colors[algo] };
-                    } else if (prevProcess || !currentBlock) {
-                        currentBlock = { id: 'IDLE', width: 40, color: 'transparent' };
-                    }
-                } else if (currentBlock) {
-                    currentBlock.width += 40;
-                }
-
-                time++;
-                if (currentProcess) {
-                    if (currentProcess.startTime === -1) currentProcess.startTime = time - 1;
-                    currentProcess.rt--;
-                    currentProcessTime++;
-
-                    if (currentProcess.rt === 0) {
-                        currentProcess.ct = time;
-                        currentProcess.tat = currentProcess.ct - currentProcess.at;
-                        currentProcess.wt = currentProcess.tat - currentProcess.bt;
-                        currentProcess.isCompleted = true;
-                        completed++;
-                        currentProcess = null;
-                    } else if (algo === 'rr' && currentProcessTime === quantum) {
-                        sortedProcs.forEach(p => {
-                            if (p.at === time && !readyQueue.includes(p)) {
-                                readyQueue.push(p);
-                                rrQueue.push(p);
-                            }
-                        });
-                        rrQueue.push(currentProcess);
-                        currentProcess = null;
-                    }
-                }
-            }
-            if (currentBlock) ganttBlocks.push(currentBlock);
-
-            const ghostEl = document.getElementById('ghostGanttContainer');
+            // C. Draw Blocks
             if (ghostEl) {
-                ghostEl.innerHTML = '';
-                ganttBlocks.forEach(b => {
-                    ghostEl.innerHTML += `<div class="ghost-gantt-block" style="width: ${b.width}px; background-color: ${b.color === 'transparent' ? 'transparent' : 'rgba(255,255,255,0.1)'}">${b.id}</div>`;
+                res.gantt.forEach(b => {
+                    if (b.color === 'transparent') {
+                        ghostEl.innerHTML += `<div class="gantt-block text-white-50" style="width: ${b.width}px; background-color: transparent; border: 1px dashed rgba(255,255,255,0.2);">${b.id}</div>`;
+                    } else {
+                        ghostEl.innerHTML += `<div class="gantt-block" style="width: ${b.width}px; background-color: ${b.color}; box-shadow: 0 0 20px ${b.color};">${b.id}</div>`;
+                    }
                 });
+
+                // D. Draw Timeline (Full Timeline Restore)
+                renderTimelineLabels(document.getElementById('gantt-timeline'), ghostEl, false);
             }
+        }
+
+        function drawGhostGantt() {
+            updateWhatIfPreview();
+        }
+
+        function renderGanttChart() {
+            updateWhatIfPreview();
         }
 
         function resetSimulationUI() {
@@ -796,6 +833,10 @@
             document.getElementById('readyQueueContainer').innerHTML = '<span class="text-white-50">Empty</span>';
             document.getElementById('liveGanttContainer').innerHTML = '';
             document.getElementById('fullGanttContainer').innerHTML = '';
+            const liveTimeline = document.getElementById('live-timeline');
+            const ganttTimeline = document.getElementById('gantt-timeline');
+            if (liveTimeline) liveTimeline.innerHTML = '';
+            if (ganttTimeline) ganttTimeline.innerHTML = '';
             processes.forEach(p => {
                 p.rt = p.bt;
                 p.ct = 0;
@@ -876,7 +917,7 @@
                     let prevProcess = currentProcess;
 
                     if (completed === n) {
-                        finalizeSimulation();
+                        finalizeSimulation(time);
                         return; // Stop animation loop
                     }
 
@@ -917,18 +958,6 @@
                     if (currentProcess !== prevProcess && time > 0) {
                         contextSwitches++;
                         csEl.innerText = contextSwitches;
-
-                        // Highlight Visualizer for Teachers
-                        const metricCard = csEl.closest('.metric-card');
-                        if (metricCard) {
-                            metricCard.style.transition = 'all 0.2s ease';
-                            metricCard.style.backgroundColor = 'rgba(255, 0, 122, 0.4)';
-                            metricCard.style.transform = 'scale(1.05)';
-                            setTimeout(() => {
-                                metricCard.style.backgroundColor = 'rgba(15, 23, 42, 0.4)';
-                                metricCard.style.transform = 'scale(1)';
-                            }, 300);
-                        }
                     }
 
                     // 3. Gantt Chart Drawing
@@ -937,14 +966,18 @@
                             currentBlock = document.createElement('div');
                             currentBlock.className = 'gantt-block';
                             currentBlock.style.backgroundColor = colors[algo];
+                            currentBlock.style.boxShadow = `0 0 20px ${colors[algo]}`;
                             currentBlock.style.width = '0px';
+                            currentBlock.style.position = 'relative';
                             currentBlock.innerHTML = currentProcess.id;
                             ganttEl.appendChild(currentBlock);
 
                             currentFullBlock = document.createElement('div');
                             currentFullBlock.className = 'gantt-block';
                             currentFullBlock.style.backgroundColor = colors[algo];
+                            currentFullBlock.style.boxShadow = `0 0 20px ${colors[algo]}`;
                             currentFullBlock.style.width = '0px';
+                            currentFullBlock.style.position = 'relative';
                             currentFullBlock.innerHTML = currentProcess.id;
                             fullGanttEl.appendChild(currentFullBlock);
                         } else if (prevProcess || !currentBlock) {
@@ -970,6 +1003,36 @@
                         let currentWidth = parseInt(currentBlock.style.width || '0');
                         currentBlock.style.width = (currentWidth + 40) + 'px';
                         if (currentFullBlock) currentFullBlock.style.width = (currentWidth + 40) + 'px';
+                    }
+
+                    // Update container widths to enable scrolling as time passes
+                    const scrollWidth = (20 + (time * 40)) + 150;
+                    const liveTl = document.getElementById('live-timeline');
+                    [ganttEl, fullGanttEl, liveTl].forEach(el => {
+                        if (el) el.style.width = scrollWidth + 'px';
+                    });
+
+                    // Inject live-timeline marker and junction line on process change or at t=0
+                    if (currentProcess !== prevProcess || time === 0) {
+                        const tl = document.getElementById('live-timeline');
+                        if (tl) {
+                            const marker = document.createElement('span');
+                            marker.textContent = time;
+                            // Aligned with 20px padding-left
+                            marker.style.left = (time * 40) + 'px';
+                            tl.appendChild(marker);
+                        }
+
+                        // Add junction lines to live chart
+                        [ganttEl, fullGanttEl].forEach(container => {
+                            if (container) {
+                                const line = document.createElement('div');
+                                line.className = 'junction-line';
+                                // Offset by 20px to match Gantt container padding
+                                line.style.left = (20 + (time * 40)) + 'px';
+                                container.appendChild(line);
+                            }
+                        });
                     }
 
                     // 4. Update Time and Process status
@@ -1028,9 +1091,30 @@
             }
         }
 
-        function finalizeSimulation() {
+        function finalizeSimulation(finalTime) {
             updateLiveMetrics();
             updateProcessTable();
+
+            // Add final terminal marker and junction line to the dedicated timeline
+            const tl = document.getElementById('live-timeline');
+            if (tl) {
+                const marker = document.createElement('span');
+                marker.textContent = finalTime;
+                marker.style.left = (finalTime * 40) + 'px';
+                marker.style.color = '#FFFFFF';
+                marker.style.fontWeight = '900';
+                marker.style.fontSize = '26px';
+                tl.appendChild(marker);
+
+                const liveGantt = document.getElementById('liveGanttContainer');
+                if (liveGantt) {
+                    const line = document.createElement('div');
+                    line.className = 'junction-line';
+                    line.style.left = (20 + (finalTime * 40)) + 'px';
+                    liveGantt.appendChild(line);
+                }
+            }
+
             document.getElementById('startSimBtn').disabled = false;
         }
 
@@ -1044,6 +1128,8 @@
                 alert("Add processes first!");
                 return;
             }
+
+            document.getElementById('recommendationText').innerHTML = '<div class="text-white-50 d-flex align-items-center gap-2"><div class="spinner-border spinner-border-sm text-info" role="status"></div> System is calculating mathematical efficiency...</div>';
 
             const algos = ['fcfs', 'sjf', 'srtf', 'rr', 'priority'];
             const algoNames = ['FCFS', 'SJF', 'SRTF', 'RR', 'Priority'];
@@ -1200,7 +1286,8 @@
             return {
                 gantt: ganttBlocks,
                 awt: totalWt / n,
-                att: totalTat / n
+                att: totalTat / n,
+                procs: simProcs
             };
         }
 
@@ -1272,6 +1359,89 @@
                 }
             });
         }
+        // Render time markers beneath Gantt blocks
+        function renderTimelineLabels(container, blockContainer, terminalOnly = false) {
+            // Remove existing markers and junction lines
+            container.querySelectorAll('.timeline-marker').forEach(el => el.remove());
+            if (blockContainer) blockContainer.querySelectorAll('.junction-line').forEach(el => el.remove());
+
+            let cumulative = 0;
+            let lastLeft = -999;
+            const source = blockContainer || container;
+            const blocks = source.querySelectorAll('.gantt-block, .ghost-gantt-block');
+
+            // Set widths for scrolling
+            let maxTime = 0;
+            blocks.forEach(b => {
+                const w = parseInt(b.style.width) || 0;
+                maxTime += Math.round(w / 40);
+            });
+            const totalScrollWidth = (20 + maxTime * 40) + 150;
+            container.style.width = totalScrollWidth + 'px';
+            if (blockContainer) blockContainer.style.width = totalScrollWidth + 'px';
+
+            blocks.forEach((block, index) => {
+                const width = parseInt(block.style.width) || 0;
+                const leftPos = block.offsetLeft;
+
+                // Draw junction line at block start
+                if (leftPos - lastLeft >= 30 || index === 0) {
+                    if (blockContainer) {
+                        const line = document.createElement('div');
+                        // In Gantt tab (container id gantt-timeline), ALL lines are short dividers
+                        const isGanttTab = container.id === 'gantt-timeline';
+                        line.className = (isGanttTab || (terminalOnly && index !== 0)) ? 'junction-line divider' : 'junction-line';
+                        line.style.left = leftPos + 'px';
+                        blockContainer.appendChild(line);
+                    }
+
+                    // Marker (Gantt tab uses 25px padding, Live uses 5px+15px margin)
+                    if (!terminalOnly || index === 0) {
+                        const label = document.createElement('div');
+                        label.className = 'timeline-marker';
+                        // If it's the gantt timeline (detected by container id), use 25px shift
+                        const shift = (container.id === 'gantt-timeline') ? 25 : 20;
+                        label.style.left = (leftPos - shift) + 'px';
+                        label.textContent = cumulative;
+                        container.appendChild(label);
+                    }
+                    lastLeft = leftPos;
+                }
+                cumulative += Math.round(width / 40);
+            });
+
+            // Final total time marker and junction line
+            if (blocks.length > 0) {
+                const finalCT = Math.max(...Array.from(processes).map(p => p.ct || 0), cumulative);
+                const finalLeftUnits = finalCT * 40;
+                const finalLeftActual = 20 + finalLeftUnits;
+
+                if (finalLeftActual - lastLeft < 30 && !terminalOnly) {
+                    const allLabels = container.querySelectorAll('.timeline-marker');
+                    if (allLabels.length > 0) allLabels[allLabels.length - 1].remove();
+                }
+
+                if (blockContainer) {
+                    const finalLine = document.createElement('div');
+                    // In Gantt tab, final line is also a short divider
+                    const isGanttTab = container.id === 'gantt-timeline';
+                    finalLine.className = isGanttTab ? 'junction-line divider' : 'junction-line';
+                    finalLine.style.left = finalLeftActual + 'px';
+                    blockContainer.appendChild(finalLine);
+                }
+
+                // Final Terminal Marker (Always show)
+                const finalLabel = document.createElement('div');
+                finalLabel.className = 'timeline-marker';
+                const finalShift = (container.id === 'gantt-timeline') ? 25 : 20;
+                finalLabel.style.left = (finalLeftActual - finalShift) + 'px';
+                finalLabel.style.color = '#FFFFFF';
+                finalLabel.style.fontWeight = '900';
+                finalLabel.style.fontSize = '26px';
+                finalLabel.textContent = finalCT;
+                container.appendChild(finalLabel);
+            }
+        }
 
         function generateRecommendation(labels, results) {
             // Find winner (lowest AWT)
@@ -1302,7 +1472,7 @@
                 <div class="d-flex align-items-start gap-2 mb-2">
                     <span style="font-size:1.4rem;">🏆</span>
                     <div>
-                        <div style="font-size:0.85rem; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px;">Recommendation Engine</div>
+                        <div style="font-size:0.85rem; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px;">Optimal Strategy Engine</div>
                         <div style="font-size:1rem; font-weight:bold; margin-top:2px;">
                             Based on your workload, <span style="color:${winnerColor};">${winner}</span> is the mathematical winner.
                         </div>
